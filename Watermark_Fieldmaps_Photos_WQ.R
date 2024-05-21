@@ -46,6 +46,9 @@ gdb_layer
 gdb_attach <- sf::read_sf(gdb_path, gdb_attach_name)
 gdb_attach
 
+#test<-sf::read_sf(gdb_path)
+#test["SHAPE"]
+
 # The "DATA" Column in the _attach table contains the raw binary (BLOB) for each photo
 # This is what the first raw photo in the table looks like:
 gdb_attach$DATA[[1]]
@@ -133,15 +136,27 @@ joined_table <- gdb_attach %>%
   left_join(gdb_layer, by = c("REL_GLOBALID" = "GlobalID"))
 head(joined_table)
 
+# This function creates X, Y, Z columns from the sfc_point object in the data.frame
+sfc_as_cols <- function(x, names = c("x","y")) {
+  stopifnot(inherits(x,"sf") && inherits(sf::st_geometry(x),"sfc_POINT"))
+  ret <- sf::st_coordinates(x)
+  ret <- tibble::as_tibble(ret)
+  stopifnot(length(names) == ncol(ret))
+  x <- x[ , !names(x) %in% names]
+  ret <- setNames(ret,names)
+  dplyr::bind_cols(x,ret)
+}
+
+# Apply function to get coordinates for the joined_table
+df <- joined_table$SHAPE
+coords<- sf::st_coordinates(df)
+
 # Make a date_time column appropriate for file names
 joined_table <- joined_table %>%
   mutate(date_time_photo = as.character(CreationDate)) %>%
   mutate(date_time_file = lubridate::date(CreationDate))%>%
-  mutate(date_time_file = str_replace_all(date_time_file,"-",""))
-
-str(joined_table$CreationDate[1])
-str(joined_table$date_time_photo[1])
-paste(joined_table$date_time_file[1])
+  mutate(date_time_file = str_replace_all(date_time_file,"-",""))%>%
+  cbind(coords) #add the x,y,z coordinates
 
 # Create a R function to apply to each photo (i.e. each row of the joined table)
 watermark <- function(x, new_folder) {
@@ -150,10 +165,15 @@ watermark <- function(x, new_folder) {
   p.title<-paste(x["unit_code"],"Water Quality Monitoring",sep=" ")
   p.direction<- x["photo_subject"]
   p.locname<-x["Location_Name"]
+  p.type<-x["Location_Type"]
   p.site <- x["station_id"]
   p.user <- x["Editor"]
-  p.dt_file<-paste(x["date_time_file"],p.site,"WQ",x["Location_Type"],p.direction,sep="_")
+  p.dt_file<-paste(x["date_time_file"],p.site,"WQ",p.type,p.direction,sep="_")
   p.filename <- x["station_id"]
+  p.lat <- x$Y
+  p.lat <- round(p.lat,6)
+  p.long <- x$X
+  p.long <- round(p.long,6)
 
   # Create paths and folders to save each photo
   dir.create(here(new_folder), recursive = TRUE, showWarnings = FALSE )
@@ -176,7 +196,11 @@ watermark <- function(x, new_folder) {
   # ---- Watermark photo -----
 
   # northwest corner
-  nw <- paste(p.title)
+  nw <- case_when(p.type=="FW" ~ paste(p.title,p.locname,sep="\n"),
+                  p.type=="MR" ~ paste(p.title,p.locname,sep="\n"),
+                  p.type=="AP" ~ paste(p.title),
+                  p.type=="BB" ~ paste(p.title,p.locname,sep="\n"),
+                  TRUE ~ NA)
   img.x2 <- image_annotate(img.x2, nw,
                           size = 25,
                           gravity = "northwest",
@@ -195,7 +219,11 @@ watermark <- function(x, new_folder) {
                            weight = 900)
   
   # northeast corner
-  ne <- paste(p.site,p.locname,sep="\n")
+  ne <- case_when(p.type=="FW" ~ paste(p.site),
+                  p.type=="MR" ~ paste(p.site),
+                  p.type=="AP" ~ paste(p.site,p.locname,sep="\n"),
+                  p.type=="BB" ~ paste(p.site),
+                  TRUE ~ NA)
   img.x2 <- image_annotate(img.x2, ne,
                           size = 25,
                           gravity = "northeast",
@@ -212,6 +240,16 @@ watermark <- function(x, new_folder) {
                           color = "white",
                           strokecolor = "black",
                           weight = 900)
+  
+  # southeast corner
+  se <- paste(p.lat,p.long,sep="\n")
+  img.x2 <- image_annotate(img.x2, se,
+                           size = 25,
+                           gravity = "southeast",
+                           font = "Helvetica",
+                           color = "white",
+                           strokecolor = "black",
+                           weight = 900)
 
   # Save photo
   image_write(img.x2, path = out.name, format = "jpg")
@@ -219,6 +257,7 @@ watermark <- function(x, new_folder) {
 }
 
 # Run the function above on the "joined_table"
-apply(X = joined_table, MARGIN = 1, FUN = watermark, new_folder = "watermarked")
+joined_table_select <- joined_table%>%filter(unit_code=="KALA")
+apply(X = joined_table_select, MARGIN = 1, FUN = watermark, new_folder = "watermarked")
 # open "watermarked" folder in working path to see results
 
