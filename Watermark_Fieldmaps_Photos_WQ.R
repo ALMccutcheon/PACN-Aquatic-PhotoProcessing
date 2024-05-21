@@ -136,8 +136,8 @@ head(joined_table)
 # Make a date_time column appropriate for file names
 joined_table <- joined_table %>%
   mutate(date_time_photo = as.character(CreationDate)) %>%
-  mutate(date_time_file = str_replace_all(CreationDate, ":", "")) %>%
-  mutate(date_time_file = str_replace_all(EditDate, " ", "_"))
+  mutate(date_time_file = lubridate::date(CreationDate))%>%
+  mutate(date_time_file = str_replace_all(date_time_file,"-",""))
 
 str(joined_table$CreationDate[1])
 str(joined_table$date_time_photo[1])
@@ -147,9 +147,13 @@ paste(joined_table$date_time_file[1])
 watermark <- function(x, new_folder) {
   # Get watermarking info from the table (x)
   p.dt_photo <- x["date_time_photo"]
-  p.name <- x["station_id"]
+  p.title<-paste(x["unit_code"],"Water Quality Monitoring",sep=" ")
+  p.direction<- x["photo_subject"]
+  p.locname<-x["Location_Name"]
+  p.site <- x["station_id"]
   p.user <- x["Editor"]
-  p.dt_file <- x["station_id"]
+  p.dt_file<-paste(x["date_time_file"],p.site,"WQ",x["Location_Type"],p.direction,sep="_")
+  p.filename <- x["station_id"]
 
   # Create paths and folders to save each photo
   dir.create(here(new_folder), recursive = TRUE, showWarnings = FALSE )
@@ -172,7 +176,7 @@ watermark <- function(x, new_folder) {
   # ---- Watermark photo -----
 
   # northwest corner
-  nw <- paste(p.name)
+  nw <- paste(p.title)
   img.x2 <- image_annotate(img.x2, nw,
                           size = 25,
                           gravity = "northwest",
@@ -180,8 +184,18 @@ watermark <- function(x, new_folder) {
                           color = "white",
                           strokecolor = "black",
                           weight = 900)
+  # top center
+  n <- paste(p.direction)
+  img.x2 <- image_annotate(img.x2, n,
+                           size = 25,
+                           gravity = "north",
+                           font = "Helvetica",
+                           color = "white",
+                           strokecolor = "black",
+                           weight = 900)
+  
   # northeast corner
-  ne <- paste(p.user)
+  ne <- paste(p.site,p.locname,sep="\n")
   img.x2 <- image_annotate(img.x2, ne,
                           size = 25,
                           gravity = "northeast",
