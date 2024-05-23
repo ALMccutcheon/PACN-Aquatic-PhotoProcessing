@@ -156,7 +156,13 @@ joined_table <- joined_table %>%
   mutate(date_time_photo = as.character(CreationDate)) %>%
   mutate(date_time_file = lubridate::date(CreationDate))%>%
   mutate(date_time_file = str_replace_all(date_time_file,"-",""))%>%
-  cbind(coords) #add the x,y,z coordinates
+  cbind(coords)%>% #add the x,y,z coordinates
+  mutate(hash = str_c(date_time_file,station_id,photo_subject)) %>% #creates a field called hash which has the fields that will be in filename
+  group_by(hash) %>% 
+  mutate(duplication_id = seq(n())-1) %>% #checks for duplication of the filename hash field and add a sequence number for duplicates
+  ungroup ()%>%
+  mutate(tag = ifelse(duplication_id==0,"",paste0("_",duplication_id)), #replaces duplication id of zero with nothing
+         Location_Name = ifelse(is.na(Location_Name)," ",Location_Name)) #replace NA in Location_Name with a space
 
 # Create a R function to apply to each photo (i.e. each row of the joined table)
 watermark <- function(x, new_folder) {
@@ -168,8 +174,9 @@ watermark <- function(x, new_folder) {
   p.type<-x["Location_Type"]
   p.site <- x["station_id"]
   p.user <- x["Editor"]
-  p.dt_file<-paste(x["date_time_file"],p.site,"WQ",p.type,p.direction,sep="_")
-  p.filename <- x["station_id"]
+  p.tag <- x["tag"]
+  p.filename<-paste(x["date_time_file"],p.site,"WQ",p.type,p.direction,sep="_")
+  p.filename.tag<-paste0(p.filename,p.tag) #added tag separately because it already includes the "_"
   p.lat <- x$Y
   p.lat <- round(p.lat,6)
   p.long <- x$X
@@ -178,7 +185,7 @@ watermark <- function(x, new_folder) {
   # Create paths and folders to save each photo
   dir.create(here(new_folder), recursive = TRUE, showWarnings = FALSE )
   out.path <- here(new_folder)
-  out.name <- file.path(out.path, paste0(p.dt_file,".jpg"))
+  out.name <- file.path(out.path, paste0(p.filename.tag,".jpg"))
   print(out.name)
 
   # Load photo
@@ -257,7 +264,7 @@ watermark <- function(x, new_folder) {
 }
 
 # Run the function above on the "joined_table"
-joined_table_select <- joined_table%>%filter(unit_code=="KALA")
+joined_table_select <- joined_table%>%filter(unit_code=="PUHO")
 apply(X = joined_table_select, MARGIN = 1, FUN = watermark, new_folder = "watermarked")
 # open "watermarked" folder in working path to see results
 
