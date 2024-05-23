@@ -1,5 +1,6 @@
-# Author: Jacob Gross jacob_gross@nps.gov
-# Date: April 12th 2022
+# Author: Amanda McCutcheon amanda_l_mccutcheon@nps.gov
+# Date: May 23, 2024
+# Adapted from a script by Jacob Gross jacob_gross@nps.gov (April 12, 2022)
 
 # Install these packages if not already installed (if installed, skip this line)
 install.packages(c("here", "tidyverse", "sf", "magick"))
@@ -13,117 +14,28 @@ library(magick) # photo editing packages (for watermarking photos)
 # Return current working folder
 here()
 
-# Create a folder called "geodatabase" for the geodatabase
-dir.create(here("geodatabase"))
-gdb_folder <- here("geodatabase")
-
-# Now go to file explorer and move or copy the geodatabase (.gdb)
-# to the "geodatabase" folder just created:
-gdb_folder
-# The geodatabase needs to contain both the layer file and
-# the attachments table (__ATTACH) containing the photos
+# Enter the folder name where the gdb is stored
+gdb_location <- here("geodatabase")
 
 # Enter the name of the geodatabase (replace my_geodatabase.gdb with correct name):
-gdb <- "8c01990f-faa9-47ea-a5d6-67c8cfdcd4f4.gdb"
-
-# path to geodatabase:
-gdb_path <- here(gdb_folder, gdb)
-
-# display layers inside geodatabase:
-st_layers(gdb_path)
-
-# Photos are stored in the "__ATTACH table" and will have geometry_type == NA
-# Copy and paste both the layer name and the _ATTACH table below
-# (replace my_layer and my_layer__ATTACH with correct name):
-gdb_layer_name <- "PACN_2024_Water_Quality_Points_Photos"
-gdb_attach_name <- "PACN_2024_Water_Quality_Points_Photos__ATTACH"
-
-# read the layer:
-gdb_layer <- sf::read_sf(gdb_path, gdb_layer_name)
-gdb_layer
-
-# read the layer__ATTACH table:
-gdb_attach <- sf::read_sf(gdb_path, gdb_attach_name)
-gdb_attach
-
-#test<-sf::read_sf(gdb_path)
-#test["SHAPE"]
-
-# The "DATA" Column in the _attach table contains the raw binary (BLOB) for each photo
-# This is what the first raw photo in the table looks like:
-gdb_attach$DATA[[1]]
-
-# Note that the class of the DATA column (containing the BLOB) is a list
-class(gdb_attach$DATA)
-str(gdb_attach$DATA)
-
-# (optional) If you tell R that the field is a BLOB, then you can view table in Rstudio
-# gdb_attach$DATA <- blob::as_blob(gdb_attach$DATA)
-# ... However, if using automation the apply() function doesn't like blobs
-# so make sure to change column back to a list before feeding into apply()
-# gdb_attach$DATA <- as.list(gdb_attach$DATA)
-
-# also note that the objects within the list are recognized as "raw" by R
-gdb_attach$DATA[[1]]
-class(gdb_attach$DATA[[1]])
-str(gdb_attach$DATA[[1]])
-here()
-# select the first photo to use as demo
-test_photo <- unlist(gdb_attach$DATA[[1]])
-str(test_photo)
-
-# Test watermarking capabilities:
-# this is the test photo:
-str(test_photo)
-
-# read the photo using "magick" package function "image_read()"
-
-# Load photo
-img <- image_read(test_photo)
-img
-print(image_attributes(img))
+gdb_name <- "8c01990f-faa9-47ea-a5d6-67c8cfdcd4f4.gdb"
 
 
-# ---- Watermark photo -----
+# Enter the layer name - this is whatever description you gave when downloading
+gdb_layer <- "PACN_2024_Water_Quality_Points_Photos"# path to geodatabase:
 
-# create labels in the corner of photos. Examples with text options:
 
-# northwest corner
-nw1 <- "PARK UNIT"
-nw2 <- "sampling frame"
-nw <- paste(nw1, nw2, sep = "\n")
-img <- image_annotate(img, nw,
-                        size = 25,
-                        gravity = "northwest",
-                        font = "Helvetica",
-                        color = "white",
-                        strokecolor = "black",
-                        weight = 900)
-img
+gdb_table_wq <- function(gdb_name, gdb_location, gdb_layer){
 
-# northeast corner
-ne <- paste("PROTOCOL", "subject", sep = "\n")
-img <- image_annotate(img, ne,
-                        size = 25,
-                        gravity = "northeast",
-                        font = "Helvetica",
-                        color = "white",
-                        strokecolor = "black",
-                        weight = 900)
-# southwest corner
-sw <- paste("YYYYMMDD")
-img <- image_annotate(img, sw,
-                        size = 25,
-                        gravity = "southwest",
-                        font = "Helvetica",
-                        color = "white",
-                        strokecolor = "black",
-                        weight = 900)
+  # Create path for gdb from location and name
+  gdb_path <- paste0(gdb_location, "/", gdb_name)
+  
+  # Layer File with attributes
+  attributes <- sf::read_sf(gdb_path, gdb_layer)
 
-# Save photo
-image_write(img, path = here("watermarked_demo.jpg"), format = "jpg")
-# Open "watermarked_demo.jpg" to see watermarked photo
-
+  # Attachments Table containing photos
+  layer_attach <- paste0(gdb_layer,"__ATTACH")
+  attachments <- sf::read_sf(gdb_path, layer_attach)
 
 
 # - Automation -----------------------------
@@ -132,9 +44,8 @@ image_write(img, path = here("watermarked_demo.jpg"), format = "jpg")
 # pulls information straight from the layer file
 
 # First step is to "join" or "relate" the layer data with the _attach table
-joined_table <- gdb_attach %>%
-  left_join(gdb_layer, by = c("REL_GLOBALID" = "GlobalID"))
-head(joined_table)
+joined_table <- attachments %>%
+  left_join(attributes, by = c("REL_GLOBALID" = "GlobalID"))
 
 # This function creates X, Y, Z columns from the sfc_point object in the data.frame
 sfc_as_cols <- function(x, names = c("x","y")) {
@@ -163,6 +74,13 @@ joined_table <- joined_table %>%
   ungroup ()%>%
   mutate(tag = ifelse(duplication_id==0,"",paste0("_",duplication_id)), #replaces duplication id of zero with nothing
          Location_Name = ifelse(is.na(Location_Name)," ",Location_Name)) #replace NA in Location_Name with a space
+
+return(joined_table)
+}
+
+t <- gdb_table_wq(gdb_name, gdb_location, gdb_layer)
+
+##########################################################################
 
 # Create a R function to apply to each photo (i.e. each row of the joined table)
 watermark <- function(x, new_folder) {
@@ -264,7 +182,7 @@ watermark <- function(x, new_folder) {
 }
 
 # Run the function above on the "joined_table"
-joined_table_select <- joined_table%>%filter(unit_code=="PUHO")
+joined_table_select <- t%>%filter(unit_code=="PUHO")
 apply(X = joined_table_select, MARGIN = 1, FUN = watermark, new_folder = "watermarked")
 # open "watermarked" folder in working path to see results
 
