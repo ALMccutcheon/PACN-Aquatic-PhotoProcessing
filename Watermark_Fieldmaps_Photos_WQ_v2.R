@@ -7,7 +7,7 @@ install.packages(c("here", "tidyverse", "sf", "magick"))
 
 # Load the packages:
 library(here) # Helps working with relative file paths
-library(tidyverse) # numerous packages that make R programming more readable
+library(dplyr) # numerous packages that make R programming more readable
 library(sf) # simple features spatial package for R
 library(magick) # photo editing packages (for watermarking photos)
 
@@ -25,6 +25,17 @@ gdb_name <- "8c01990f-faa9-47ea-a5d6-67c8cfdcd4f4.gdb"
 gdb_layer <- "PACN_2024_Water_Quality_Points_Photos"# path to geodatabase:
 
 
+# This function creates X, Y, Z columns from the sfc_point object in the data.frame
+sfc_as_cols <- function(x, names = c("x","y")) {
+  stopifnot(inherits(x,"sf") && inherits(sf::st_geometry(x),"sfc_POINT"))
+  ret <- sf::st_coordinates(x)
+  ret <- tibble::as_tibble(ret)
+  stopifnot(length(names) == ncol(ret))
+  x <- x[ , !names(x) %in% names]
+  ret <- setNames(ret,names)
+  dplyr::bind_cols(x,ret)
+}
+
 gdb_table_wq <- function(gdb_name, gdb_location, gdb_layer){
 
   # Create path for gdb from location and name
@@ -38,25 +49,9 @@ gdb_table_wq <- function(gdb_name, gdb_location, gdb_layer){
   attachments <- sf::read_sf(gdb_path, layer_attach)
 
 
-# - Automation -----------------------------
-
-# To automate process, create a function that
-# pulls information straight from the layer file
-
-# First step is to "join" or "relate" the layer data with the _attach table
+# Join the layer data with the _attach table
 joined_table <- attachments %>%
-  left_join(attributes, by = c("REL_GLOBALID" = "GlobalID"))
-
-# This function creates X, Y, Z columns from the sfc_point object in the data.frame
-sfc_as_cols <- function(x, names = c("x","y")) {
-  stopifnot(inherits(x,"sf") && inherits(sf::st_geometry(x),"sfc_POINT"))
-  ret <- sf::st_coordinates(x)
-  ret <- tibble::as_tibble(ret)
-  stopifnot(length(names) == ncol(ret))
-  x <- x[ , !names(x) %in% names]
-  ret <- setNames(ret,names)
-  dplyr::bind_cols(x,ret)
-}
+  dplyr::left_join(attributes, by = c("REL_GLOBALID" = "GlobalID"))
 
 # Apply function to get coordinates for the joined_table
 df <- joined_table$SHAPE
@@ -64,15 +59,15 @@ coords<- sf::st_coordinates(df)
 
 # Make a date_time column appropriate for file names
 joined_table <- joined_table %>%
-  mutate(date_time_photo = as.character(CreationDate)) %>%
-  mutate(date_time_file = lubridate::date(CreationDate))%>%
-  mutate(date_time_file = str_replace_all(date_time_file,"-",""))%>%
+  dplyr::mutate(date_time_photo = as.character(CreationDate)) %>%
+  dplyr::mutate(date_time_file = lubridate::date(CreationDate))%>%
+  dplyr::mutate(date_time_file = str_replace_all(date_time_file,"-",""))%>%
   cbind(coords)%>% #add the x,y,z coordinates
-  mutate(hash = str_c(date_time_file,station_id,photo_subject)) %>% #creates a field called hash which has the fields that will be in filename
-  group_by(hash) %>% 
-  mutate(duplication_id = seq(n())-1) %>% #checks for duplication of the filename hash field and add a sequence number for duplicates
-  ungroup ()%>%
-  mutate(tag = ifelse(duplication_id==0,"",paste0("_",duplication_id)), #replaces duplication id of zero with nothing
+  dplyr::mutate(hash = str_c(date_time_file,station_id,photo_subject)) %>% #creates a field called hash which has the fields that will be in filename
+  dplyr::group_by(hash) %>% 
+  dplyr::mutate(duplication_id = seq(n())-1) %>% #checks for duplication of the filename hash field and add a sequence number for duplicates
+  dplyr::ungroup ()%>%
+  dplyr::mutate(tag = ifelse(duplication_id==0,"",paste0("_",duplication_id)), #replaces duplication id of zero with nothing
          Location_Name = ifelse(is.na(Location_Name)," ",Location_Name)) #replace NA in Location_Name with a space
 
 return(joined_table)
@@ -111,7 +106,7 @@ watermark <- function(x, new_folder) {
     purrr::pluck(1)
 
 
-  img.x <- image_read(image.x)
+  img.x <- magick::image_read(image.x)
 
   # Apply auto-orientation "image_orient()" which tries to infer the correct orientation
   #' from the Exif data.
@@ -121,12 +116,12 @@ watermark <- function(x, new_folder) {
   # ---- Watermark photo -----
 
   # northwest corner
-  nw <- case_when(p.type=="FW" ~ paste(p.title,p.locname,sep="\n"),
+  nw <- dplyr::case_when(p.type=="FW" ~ paste(p.title,p.locname,sep="\n"),
                   p.type=="MR" ~ paste(p.title,p.locname,sep="\n"),
                   p.type=="AP" ~ paste(p.title),
                   p.type=="BB" ~ paste(p.title,p.locname,sep="\n"),
                   TRUE ~ NA)
-  img.x2 <- image_annotate(img.x2, nw,
+  img.x2 <- magick::image_annotate(img.x2, nw,
                           size = 25,
                           gravity = "northwest",
                           font = "Helvetica",
@@ -135,7 +130,7 @@ watermark <- function(x, new_folder) {
                           weight = 900)
   # top center
   n <- paste(p.direction)
-  img.x2 <- image_annotate(img.x2, n,
+  img.x2 <- magick::image_annotate(img.x2, n,
                            size = 25,
                            gravity = "north",
                            font = "Helvetica",
@@ -144,12 +139,12 @@ watermark <- function(x, new_folder) {
                            weight = 900)
   
   # northeast corner
-  ne <- case_when(p.type=="FW" ~ paste(p.site),
+  ne <- dplyr::case_when(p.type=="FW" ~ paste(p.site),
                   p.type=="MR" ~ paste(p.site),
                   p.type=="AP" ~ paste(p.site,p.locname,sep="\n"),
                   p.type=="BB" ~ paste(p.site),
                   TRUE ~ NA)
-  img.x2 <- image_annotate(img.x2, ne,
+  img.x2 <- magick::image_annotate(img.x2, ne,
                           size = 25,
                           gravity = "northeast",
                           font = "Helvetica",
@@ -158,7 +153,7 @@ watermark <- function(x, new_folder) {
                           weight = 900)
   # southwest corner
   sw <- paste(p.dt_photo)
-  img.x2 <- image_annotate(img.x2, sw,
+  img.x2 <- magick::image_annotate(img.x2, sw,
                           size = 25,
                           gravity = "southwest",
                           font = "Helvetica",
@@ -168,7 +163,7 @@ watermark <- function(x, new_folder) {
   
   # southeast corner
   se <- paste(p.lat,p.long,sep="\n")
-  img.x2 <- image_annotate(img.x2, se,
+  img.x2 <- magick::image_annotate(img.x2, se,
                            size = 25,
                            gravity = "southeast",
                            font = "Helvetica",
@@ -177,12 +172,13 @@ watermark <- function(x, new_folder) {
                            weight = 900)
 
   # Save photo
-  image_write(img.x2, path = out.name, format = "jpg")
+  magick::image_write(img.x2, path = out.name, format = "jpg")
 
 }
 
 # Run the function above on the "joined_table"
-joined_table_select <- t%>%filter(unit_code=="PUHO")
+joined_table_select <- t%>%
+  dplyr::filter(unit_code=="PUHO")
 apply(X = joined_table_select, MARGIN = 1, FUN = watermark, new_folder = "watermarked")
 # open "watermarked" folder in working path to see results
 
