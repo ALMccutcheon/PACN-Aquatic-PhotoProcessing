@@ -24,7 +24,7 @@ gdb_folder
 # the attachments table (__ATTACH) containing the photos
 
 # Enter the name of the geodatabase (replace my_geodatabase.gdb with correct name):
-gdb <- "KAHO_test_photo_layer.gdb"
+gdb <- "8c01990f-faa9-47ea-a5d6-67c8cfdcd4f4.gdb"
 
 # path to geodatabase:
 gdb_path <- here(gdb_folder, gdb)
@@ -33,10 +33,10 @@ gdb_path <- here(gdb_folder, gdb)
 st_layers(gdb_path)
 
 # Photos are stored in the "__ATTACH table" and will have geometry_type == NA
-# Copy and past both the layer name and the _ATTACH table below
+# Copy and paste both the layer name and the _ATTACH table below
 # (replace my_layer and my_layer__ATTACH with correct name):
-gdb_layer_name <- "test"
-gdb_attach_name <- "test__ATTACH"
+gdb_layer_name <- "PACN_2024_Water_Quality_Points_Photos"
+gdb_attach_name <- "PACN_2024_Water_Quality_Points_Photos__ATTACH"
 
 # read the layer:
 gdb_layer <- sf::read_sf(gdb_path, gdb_layer_name)
@@ -96,6 +96,7 @@ img <- image_annotate(img, nw,
                         color = "white",
                         strokecolor = "black",
                         weight = 900)
+img
 
 # northeast corner
 ne <- paste("PROTOCOL", "subject", sep = "\n")
@@ -134,11 +135,11 @@ head(joined_table)
 
 # Make a date_time column appropriate for file names
 joined_table <- joined_table %>%
-  mutate(date_time_photo = as.character(created_date)) %>%
-  mutate(date_time_file = str_replace_all(created_date, ":", "")) %>%
-  mutate(date_time_file = str_replace_all(date_time_file, " ", "_"))
+  mutate(date_time_photo = as.character(CreationDate)) %>%
+  mutate(date_time_file = str_replace_all(CreationDate, ":", "")) %>%
+  mutate(date_time_file = str_replace_all(EditDate, " ", "_"))
 
-str(joined_table$created_date[1])
+str(joined_table$CreationDate[1])
 str(joined_table$date_time_photo[1])
 paste(joined_table$date_time_file[1])
 
@@ -146,9 +147,9 @@ paste(joined_table$date_time_file[1])
 watermark <- function(x, new_folder) {
   # Get watermarking info from the table (x)
   p.dt_photo <- x["date_time_photo"]
-  p.name <- x["ATT_NAME"]
-  p.user <- x["created_user"]
-  p.dt_file <- x["date_time_file"]
+  p.name <- x["station_id"]
+  p.user <- x["Editor"]
+  p.dt_file <- x["station_id"]
 
   # Create paths and folders to save each photo
   dir.create(here(new_folder), recursive = TRUE, showWarnings = FALSE )
