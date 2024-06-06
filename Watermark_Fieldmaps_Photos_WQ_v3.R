@@ -3,11 +3,17 @@
 # Author: Amanda McCutcheon (amanda_l_mccutcheon@nps.gov)
 # Date: May 23, 2024
 #
-# Update the USER INPUT section. 
-# Then use the Source button above or highlight the whole script and press ctrl-Enter.
-# Contact Amanda if you get an error.
+# 1) Navigate to https://nps.maps.arcgis.com/home/item.html?id=20b20a767ffb4d608f292f5ba4619208. You may need to log in to nps.maps.arcgis.com.
+# 2) Click "Export Data" in the menu on the right, and Select "Export to FGDB".
+# 3) Give the file an appropriate title and export to a folder in your content. Click "Export". This may take several minutes.
+# 4) Once exported, click "Download" and download the file, saving it in the "geodatabase" folder within this project.
+# 5) It will download as a zip file. Extract the file by right clicking and selecting "Extract All". Save the extracted file to the "geodatabase" folder.
+# 6) Rename the geodatabase to something like "YYYYMMDD_WQ_PACN_Field_Images.gdb"
+# 7) Update the USER INPUT section in this script. 
+# 8) Use the Source button above or highlight the whole script and press ctrl-Enter.
+# 9) Contact Amanda if you get an error.
 #
-# the first time you run this you will need to install the three packages listed.
+# NOTE: The first time you run this you will need to install the three packages listed.
 # Removed the # from the next line to install the required packages.
 # install.packages("here","dplyr","PACNAquaticWaterQuality")
 
@@ -17,14 +23,14 @@ library(dplyr)
 
 #### USER INPUT ####
 location <- here("geodatabase") # Enter the folder name where the gdb is stored.
-name <- "8c01990f-faa9-47ea-a5d6-67c8cfdcd4f4.gdb" # Enter the name of the gdb file.
-layer <- "PACN_2024_Water_Quality_Points_Photos"# Enter the layer name - this is whatever description you gave when downloading
+name <- "20240606_WQ_PACN_Field_Images.gdb" # Enter the name of the gdb file.
+layer <- "PACN_2024_Water_Quality_Points_Photos"# Enter the layer name - this should stay the same unless Mark updates the collection layer title.
 
 # Enter Sampling Event Info
-unit_code <- "KAHO"
+unit_code <- "ALKA"
 loc_type <- "AP"
 select_months <- as.vector(c(4,5,6))
-folder <- "watermarked/20240509_KAHO_AP"
+folder <- "watermarked/20240605_ALKA_AP"
 
 #------------------------------------------------------------------------------
 
