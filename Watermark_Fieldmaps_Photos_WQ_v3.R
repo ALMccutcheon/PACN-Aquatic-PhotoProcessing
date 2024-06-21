@@ -27,10 +27,10 @@ name <- "20240615_WQ_PACN_Field_Images.gdb" # Enter the name of the gdb file.
 layer <- "PACN_2024_Water_Quality_Points_Photos"# Enter the layer name - this should stay the same unless Mark updates the collection layer title.
 
 # Enter Sampling Event Info
-unit_code <- c("KAHO","PUHO")
-loc_type <- "AP"
+unit_code <- c("KAHO")
+loc_type <- "GW"
 select_months <- as.vector(c(4,5,6))
-folder <- "watermarked/20240615_KAHO_GW"
+folder <- "watermarked/20240621_test"
 
 #------------------------------------------------------------------------------
 
