@@ -7,21 +7,36 @@ library(dplyr)
 
 #### USER INPUT ####
 location <- here("geodatabase") # Enter the folder name where the gdb is stored.
-name <- "20240604_WQ_PACN_Field_Images.gdb" # Enter the name of the gdb file.
+name <- "20240615_WQ_PACN_Field_Images.gdb" # Enter the name of the gdb file.
 layer <- "PACN_2024_Water_Quality_Points_Photos"# Enter the layer name - this is whatever description you gave when downloading
 
 # Enter Sampling Event Info
-unit_code <- "KAHO"
-loc_type <- "MR"
+park_code <- "AMME"
+loc_type <- "FW"
 select_months <- as.vector(c(4,5,6))
-folder <- "watermarked/20240604_KAHO_MR"
+folder <- "watermarked/20240615_AMME_FW_BB"
 
 #------------------------------------------------------------------------------
 
 table <- gdb_table_wq(gdb_name=name,gdb_location=location,gdb_layer=layer)
 table_2 <- table %>%
-  filter(unit_code=="KAHO",Location_Type=="MR",CreationDate>"2024-06-04")
-head(table_2)
+  filter(unit_code==park_code,Location_Type==loc_type)
+
+#--------------------------------------------------
+# Made a few edits to the table for AMME. This can be deleted for other uses
+brackish_sites <- c("FAMME01_fw","FAMME02_fw","FAMME03_fw","FAMME09_fw")
+freshwater_sites <- c("FAMME04_fw","FAMME05_fw","FAMME06_fw","FAMME07_fw","FAMME08_fw")
+table_2 <- table_2 %>%
+  mutate(Location_Type=ifelse(station_id%in%brackish_sites,"BB","FW"),
+         Location_Name=ifelse(station_id%in%brackish_sites,"Constructed Wetland","Natural Wetland"),
+         station_id=ifelse(station_id%in%brackish_sites,stringr::str_replace(station_id,"fw","bb"),station_id),
+         date_time_photo=as.character(as.POSIXct(date_time_photo,format = "%Y-%m-%d %H:%M:%S")+lubridate::hours(20)),
+         date_time_file="20240616")
+
+apply(X = table_2, MARGIN = 1, FUN = watermark_wq, new_folder = folder)
+#---------------------------------------------------
+
+# This function is edited to change photo date and increase the water mark size from photos added to AGOL online rather than through fieldmaps.
 
 watermark_wq_edited <- function (x, new_folder) 
 {
@@ -78,6 +93,8 @@ watermark_wq_edited <- function (x, new_folder)
   magick::image_write(img.x2, path = out.name, format = "jpg")
 }
 
+#------------------------------------------------------------------------------
+# This function uses the above function to watermark rather than the one written into the package
 
 process_watermark_wq_edited<- function (gdb_name, gdb_location, gdb_layer, park, loctype, 
           select_months = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), 
@@ -89,7 +106,7 @@ process_watermark_wq_edited<- function (gdb_name, gdb_location, gdb_layer, park,
     dplyr::filter(file_month %in% select_months)
   apply(X = t_select, MARGIN = 1, FUN = watermark_wq_edited, new_folder = output_folder)
 }
-
+#------------------------------------------------------------------------------
 #### RUN WATERMARK FUNCTION ####
 # This should work as is. No need to update.
 
