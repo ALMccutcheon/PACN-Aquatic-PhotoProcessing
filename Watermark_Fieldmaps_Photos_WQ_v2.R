@@ -10,6 +10,7 @@ library(here) # Helps working with relative file paths
 library(dplyr) # numerous packages that make R programming more readable
 library(sf) # simple features spatial package for R
 library(magick) # photo editing packages (for watermarking photos)
+library(stringr)
 
 # Return current working folder
 here()
@@ -18,11 +19,11 @@ here()
 gdb_location <- here("geodatabase")
 
 # Enter the name of the geodatabase (replace my_geodatabase.gdb with correct name):
-gdb_name <- "8c01990f-faa9-47ea-a5d6-67c8cfdcd4f4.gdb"
+gdb_name <- "20240731_WQ_PACN_Field_Images.gdb"
 
 
 # Enter the layer name - this is whatever description you gave when downloading
-gdb_layer <- "PACN_2024_Water_Quality_Points_Photos"# path to geodatabase:
+gdb_layer <- "PACN_WQ_2024_Sampling_v05"# path to geodatabase:
 
 
 # This function creates X, Y, Z columns from the sfc_point object in the data.frame
@@ -59,8 +60,8 @@ coords<- sf::st_coordinates(df)
 
 # Make a date_time column appropriate for file names
 joined_table <- joined_table %>%
-  dplyr::mutate(date_time_photo = as.character(CreationDate)) %>%
-  dplyr::mutate(date_time_file = lubridate::date(CreationDate))%>%
+  dplyr::mutate(date_time_photo = as.character(created_date)) %>%
+  dplyr::mutate(date_time_file = lubridate::date(created_date))%>%
   dplyr::mutate(date_time_file = str_replace_all(date_time_file,"-",""))%>%
   cbind(coords)%>% #add the x,y,z coordinates
   dplyr::mutate(hash = str_c(date_time_file,station_id,photo_subject)) %>% #creates a field called hash which has the fields that will be in filename

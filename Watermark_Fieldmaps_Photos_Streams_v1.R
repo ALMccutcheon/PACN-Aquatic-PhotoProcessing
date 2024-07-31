@@ -30,13 +30,13 @@ layer <- "PACN_WQ_2024_Sampling_v05"# Enter the layer name - this should stay th
 unit_code <- c("HALE")
 loc_type <- "FW"
 select_months <- as.vector(c(7,8,9))
-folder <- "watermarked/20240722_HALE_WQ"
+folder <- "watermarked/20240722_HALE"
 
 #------------------------------------------------------------------------------
 
 #### RUN WATERMARK FUNCTION ####
 # This should work as is. No need to update.
 
-process_watermark_wq(gdb_name=name,gdb_location=location,gdb_layer=layer,
+process_watermark_streams(gdb_name=name,gdb_location=location,gdb_layer=layer,
                      park = unit_code, loctype = loc_type,
                      select_months = select_months, output_folder = folder)
