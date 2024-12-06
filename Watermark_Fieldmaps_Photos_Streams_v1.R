@@ -1,4 +1,4 @@
-# Title: Processing WQ Images from Fieldmaps Geodatabase
+# Title: Processing Stream Animals Images from Fieldmaps Geodatabase
 #
 # Author: Amanda McCutcheon (amanda_l_mccutcheon@nps.gov)
 # Date: May 23, 2024
@@ -23,14 +23,14 @@ library(dplyr)
 
 #### USER INPUT ####
 location <- here("geodatabase") # Enter the folder name where the gdb is stored.
-name <- "20240731_WQ_PACN_Field_Images.gdb" # Enter the name of the gdb file.
-layer <- "PACN_WQ_2024_Sampling_v05"# Enter the layer name - this should stay the same unless Mark updates the collection layer title.Use sf::st_layers(here(location, name)) to find layer name.
+name <- "20240815_WQ_PACN_Field_Images.gdb" # Enter the name of the gdb file.
+layer <- "PACN_2024_Water_Quality_Points_Photos__v7_"# Enter the layer name - this should stay the same unless Mark updates the collection layer title.Use sf::st_layers(here(location, name)) to find layer name.
 
 # Enter Sampling Event Info
 unit_code <- c("HALE")
 loc_type <- "FW"
 select_months <- as.vector(c(7,8,9))
-folder <- "watermarked/20240722_HALE"
+folder <- "watermarked/test"
 
 #------------------------------------------------------------------------------
 
