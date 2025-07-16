@@ -23,14 +23,14 @@ library(dplyr)
 
 #### USER INPUT ####
 location <- here("geodatabase") # Enter the folder name where the gdb is stored.
-name <- "20241205_WQ_PACN_Field_Images.gdb" # Enter the name of the gdb file.
+name <- "20250110_WQ_PACN_Field_Images.gdb" # Enter the name of the gdb file.
 layer <- "PACN_2024_Water_Quality_Points_Photos__v7_"# Enter the layer name - this should stay the same unless Mark updates the collection layer title.Use sf::st_layers(here(location, name)) to find layer name.
 
 # Enter Sampling Event Info
-unit_code <- c("PUHO")
+unit_code <- c("KAHO")
 loc_type <- "AP"
-select_months <- as.vector(c(11))
-folder <- "watermarked/20241125_PUHO_AP"
+select_months <- as.vector(c(12))
+folder <- "watermarked/20241210_KAHO_new_AP"
 
 #------------------------------------------------------------------------------
 
